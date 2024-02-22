@@ -14,7 +14,6 @@ import org.apache.pulsar.client.api.*;
 import org.apache.pulsar.client.api.schema.KeyValueSchema;
 import org.apache.pulsar.client.impl.MultiplierRedeliveryBackoff;
 import org.apache.pulsar.client.impl.conf.ConsumerConfigurationData;
-import org.apache.pulsar.client.impl.schema.AutoConsumeSchema;
 import org.eclipse.microprofile.reactive.messaging.Message;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -115,7 +114,7 @@ public class PulsarIncomingChannel<T> {
                     .until(m -> closed.get())
                     .plug(msgMulti -> {
                         // Calling getValue on the pulsar-client-internal thread to make sure the SchemaInfo is fetched
-                        if (schema instanceof AutoConsumeSchema || schema instanceof KeyValueSchema) {
+                        if (schema.supportSchemaVersioning() || schema instanceof KeyValueSchema) {
                             return msgMulti.onItem().call(msg -> Uni.createFrom().item(msg::getValue));
                         } else {
                             return msgMulti;
@@ -139,7 +138,7 @@ public class PulsarIncomingChannel<T> {
                     .filter(m -> m.size() > 0)
                     .plug(msgMulti -> {
                         // Calling getValue on the pulsar-client-internal thread to make sure the SchemaInfo is fetched
-                        if (schema instanceof AutoConsumeSchema || schema instanceof KeyValueSchema) {
+                        if (schema.supportSchemaVersioning() || schema instanceof KeyValueSchema) {
                             return msgMulti.onItem().call(msg -> Uni.createFrom().item(() -> {
                                 msg.forEach(m -> m.getValue());
                                 return null;
